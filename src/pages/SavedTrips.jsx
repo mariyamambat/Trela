@@ -4,6 +4,9 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../services/firebase";
 import { getSavedTrips } from "../api/savedTrips";
 
+const USERNAME_STORAGE_KEY = "trelaSignedInUsername";
+const LEGACY_USERNAME_STORAGE_KEY = "treloSignedInUsername";
+
 const SavedTrips = () => {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -30,7 +33,8 @@ const SavedTrips = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      localStorage.removeItem("treloSignedInUsername");
+      localStorage.removeItem(USERNAME_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_USERNAME_STORAGE_KEY);
     } catch (e) {
       console.error(e);
     }
@@ -84,7 +88,7 @@ const SavedTrips = () => {
           <span className="eyebrow-pill">Your library</span>
           <h1 className="hero-title mt-4 text-left">Saved trips</h1>
           <p className="hero-subtitle mt-3 text-left max-w-xl">
-            Trips you saved from Trelo AI appear here. Open the planner to generate a new one.
+            Trips you saved from Trela AI appear here. Open the planner to generate a new one.
           </p>
         </header>
 

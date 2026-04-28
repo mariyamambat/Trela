@@ -7,6 +7,9 @@ import { getWeather, getWeatherForecast } from "./api/weather";
 import { auth } from "./services/firebase";
 import { saveTrip } from "./api/savedTrips";
 
+const USERNAME_STORAGE_KEY = "trelaSignedInUsername";
+const LEGACY_USERNAME_STORAGE_KEY = "treloSignedInUsername";
+
 const App = () => {
   const [startingLocation, setStartingLocation] = useState("");
   const [destination, setDestination] = useState("");
@@ -54,7 +57,10 @@ const App = () => {
       setAuthLoading(false);
       setShowAuthModal(!firebaseUser);
       if (firebaseUser) {
-        const storedUsername = localStorage.getItem("treloSignedInUsername") || "";
+        const storedUsername =
+          localStorage.getItem(USERNAME_STORAGE_KEY) ||
+          localStorage.getItem(LEGACY_USERNAME_STORAGE_KEY) ||
+          "";
         setSignedInUsername(storedUsername || firebaseUser.displayName || firebaseUser.email || "user");
       } else {
         setSignedInUsername("");
@@ -159,7 +165,8 @@ const App = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      localStorage.removeItem("treloSignedInUsername");
+      localStorage.removeItem(USERNAME_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_USERNAME_STORAGE_KEY);
       setSignedInUsername("");
       setHasSearched(false);
       setTripPlan(null);
@@ -187,14 +194,17 @@ const App = () => {
 
       if (authMode === "login") {
         await signInWithEmailAndPassword(auth, authEmail.trim(), authPassword);
-        const storedUsername = localStorage.getItem("treloSignedInUsername") || "";
+        const storedUsername =
+          localStorage.getItem(USERNAME_STORAGE_KEY) ||
+          localStorage.getItem(LEGACY_USERNAME_STORAGE_KEY) ||
+          "";
         setSignedInUsername(storedUsername || authEmail.trim().split("@")[0] || "user");
       } else {
         if (!authUsername.trim()) {
           throw new Error("Enter username to sign up.");
         }
         await createUserWithEmailAndPassword(auth, authEmail.trim(), authPassword);
-        localStorage.setItem("treloSignedInUsername", authUsername.trim());
+        localStorage.setItem(USERNAME_STORAGE_KEY, authUsername.trim());
         setSignedInUsername(authUsername.trim());
       }
 
@@ -270,7 +280,7 @@ const App = () => {
             <h1 className="hero-title mt-6">
               Planning now made easy
               <br />
-              with <span className="hero-gradient-text">Trelo AI</span>
+              with <span className="hero-gradient-text">Trela AI</span>
             </h1>
             <p className="hero-subtitle mt-5">
               Get a complete day-by-day itinerary with places, food, and weather insights -
