@@ -3,9 +3,7 @@ import { Link } from "react-router-dom";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../services/firebase";
 import { getSavedTrips } from "../api/savedTrips";
-
-const USERNAME_STORAGE_KEY = "trelaSignedInUsername";
-const LEGACY_USERNAME_STORAGE_KEY = "treloSignedInUsername";
+import { clearStoredUsername } from "../utils/authStorage";
 
 const SavedTrips = () => {
   const [user, setUser] = useState(null);
@@ -33,8 +31,7 @@ const SavedTrips = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      localStorage.removeItem(USERNAME_STORAGE_KEY);
-      localStorage.removeItem(LEGACY_USERNAME_STORAGE_KEY);
+      clearStoredUsername();
     } catch (e) {
       console.error(e);
     }

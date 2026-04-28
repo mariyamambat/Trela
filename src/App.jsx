@@ -6,9 +6,7 @@ import { getPlaces, getTripOverview, searchCities } from "./api/geoapify";
 import { getWeather, getWeatherForecast } from "./api/weather";
 import { auth } from "./services/firebase";
 import { saveTrip } from "./api/savedTrips";
-
-const USERNAME_STORAGE_KEY = "trelaSignedInUsername";
-const LEGACY_USERNAME_STORAGE_KEY = "treloSignedInUsername";
+import { clearStoredUsername, getStoredUsername, USERNAME_STORAGE_KEY } from "./utils/authStorage";
 
 const App = () => {
   const [startingLocation, setStartingLocation] = useState("");
@@ -57,10 +55,7 @@ const App = () => {
       setAuthLoading(false);
       setShowAuthModal(!firebaseUser);
       if (firebaseUser) {
-        const storedUsername =
-          localStorage.getItem(USERNAME_STORAGE_KEY) ||
-          localStorage.getItem(LEGACY_USERNAME_STORAGE_KEY) ||
-          "";
+        const storedUsername = getStoredUsername();
         setSignedInUsername(storedUsername || firebaseUser.displayName || firebaseUser.email || "user");
       } else {
         setSignedInUsername("");
@@ -165,8 +160,7 @@ const App = () => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      localStorage.removeItem(USERNAME_STORAGE_KEY);
-      localStorage.removeItem(LEGACY_USERNAME_STORAGE_KEY);
+      clearStoredUsername();
       setSignedInUsername("");
       setHasSearched(false);
       setTripPlan(null);
@@ -194,10 +188,7 @@ const App = () => {
 
       if (authMode === "login") {
         await signInWithEmailAndPassword(auth, authEmail.trim(), authPassword);
-        const storedUsername =
-          localStorage.getItem(USERNAME_STORAGE_KEY) ||
-          localStorage.getItem(LEGACY_USERNAME_STORAGE_KEY) ||
-          "";
+        const storedUsername = getStoredUsername();
         setSignedInUsername(storedUsername || authEmail.trim().split("@")[0] || "user");
       } else {
         if (!authUsername.trim()) {
@@ -240,7 +231,7 @@ const App = () => {
       console.error("handleSaveTrip failed:", error);
       const hint =
         error?.code === "permission-denied"
-          ? " Check Firestore rules allow writes to users/{uid}/savedTrips."
+          ? " Check Firestore rules allow writes to users/{uid}/trips."
           : "";
       setSaveMessage(`Failed to save trip.${hint}`);
     } finally {
