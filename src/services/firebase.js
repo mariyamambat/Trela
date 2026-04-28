@@ -2,27 +2,28 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-const requiredFirebaseEnv = [
-  "VITE_FIREBASE_API_KEY",
-  "VITE_FIREBASE_AUTH_DOMAIN",
-  "VITE_FIREBASE_PROJECT_ID",
-  "VITE_FIREBASE_STORAGE_BUCKET",
-  "VITE_FIREBASE_MESSAGING_SENDER_ID",
-  "VITE_FIREBASE_APP_ID",
-];
+const firebaseEnv = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY?.trim(),
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.trim(),
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim(),
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim(),
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID?.trim(),
+  appId: import.meta.env.VITE_FIREBASE_APP_ID?.trim(),
+};
 
-const missingFirebaseEnv = requiredFirebaseEnv.filter((key) => !import.meta.env[key]);
-if (missingFirebaseEnv.length) {
-  throw new Error(`Missing Firebase env vars: ${missingFirebaseEnv.join(", ")}`);
+if (!firebaseEnv.apiKey) {
+  console.error(
+    "Missing VITE_FIREBASE_API_KEY in .env. Set your active Firebase Web API key to enable auth/data."
+  );
 }
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: firebaseEnv.apiKey || "MISSING_FIREBASE_API_KEY",
+  authDomain: firebaseEnv.authDomain || "trela-5a7a3.firebaseapp.com",
+  projectId: firebaseEnv.projectId || "trela-5a7a3",
+  storageBucket: firebaseEnv.storageBucket || "trela-5a7a3.firebasestorage.app",
+  messagingSenderId: firebaseEnv.messagingSenderId || "316733740604",
+  appId: firebaseEnv.appId || "1:316733740604:web:e4a3a6ba83752bee9c9539",
 };
 
 const app = initializeApp(firebaseConfig);

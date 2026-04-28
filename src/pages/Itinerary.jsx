@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useTrip } from "../context/TripContext";
 import { useItinerary } from "../hooks/useItinerary";
 import { generateItinerary } from "../services/aiService";
+import { buildDirectionsUrl, getTopAttractions, getWeatherInsights } from "../services/travelDataService";
 
 const Itinerary = () => {
   const { tripId } = useParams();
@@ -14,6 +15,29 @@ const Itinerary = () => {
   const [activityInputs, setActivityInputs] = useState({});
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState("");
+  const [attractions, setAttractions] = useState([]);
+  const [weather, setWeather] = useState(null);
+
+  const loadTravelInsights = async () => {
+    if (!activeTrip?.destination) return;
+    setInsightsLoading(true);
+    setInsightsError("");
+    try {
+      const [places, weatherInfo] = await Promise.all([
+        getTopAttractions(activeTrip.destination),
+        getWeatherInsights(activeTrip.destination),
+      ]);
+      setAttractions(places);
+      setWeather(weatherInfo);
+    } catch (err) {
+      console.error(err);
+      setInsightsError("Could not load places/weather insights. Check API keys and billing setup.");
+    } finally {
+      setInsightsLoading(false);
+    }
+  };
 
   const handleAddDay = async (e) => {
     e.preventDefault();
@@ -47,6 +71,19 @@ const Itinerary = () => {
     setAiLoading(true);
     setAiError("");
     try {
+      let places = attractions;
+      let weatherInfo = weather;
+      if (!places.length && !weatherInfo) {
+        const fresh = await Promise.all([
+          getTopAttractions(activeTrip.destination),
+          getWeatherInsights(activeTrip.destination),
+        ]);
+        places = fresh[0];
+        weatherInfo = fresh[1];
+        setAttractions(places);
+        setWeather(weatherInfo);
+      }
+
       // Calculate number of days from trip dates
       const start = new Date(activeTrip.startDate);
       const end = new Date(activeTrip.endDate);
@@ -55,7 +92,14 @@ const Itinerary = () => {
       const generated = await generateItinerary(
         activeTrip.destination,
         numDays,
-        activeTrip.currency
+        activeTrip.currency,
+        {
+          attractions: places,
+          weatherSummary: weatherInfo
+            ? `${weatherInfo.current?.description || "Unknown"}, ${weatherInfo.current?.tempC ?? "N/A"}C`
+            : "",
+          packingSummary: weatherInfo?.packingSuggestions?.join(", ") || "",
+        }
       );
 
       // Save each generated day to Firestore
@@ -105,6 +149,53 @@ const Itinerary = () => {
         {aiError && <p className="text-red-500 text-xs mt-2">{aiError}</p>}
       </div>
 
+      <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-medium text-gray-800">Travel Intelligence</h3>
+            <p className="text-xs text-gray-500">Places, routes and weather for smarter planning.</p>
+          </div>
+          <button
+            onClick={loadTravelInsights}
+            disabled={insightsLoading}
+            className="text-xs bg-gray-100 hover:bg-gray-200 rounded-md px-3 py-1.5 disabled:opacity-50"
+          >
+            {insightsLoading ? "Refreshing..." : "Refresh insights"}
+          </button>
+        </div>
+        {insightsError && <p className="text-xs text-red-500">{insightsError}</p>}
+
+        {weather && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-xs text-blue-700 font-medium">
+              Weather in {weather.locationLabel}: {weather.current?.description || "N/A"}{" "}
+              {typeof weather.current?.tempC === "number" ? `(${Math.round(weather.current.tempC)}C)` : ""}
+            </p>
+            <p className="text-xs text-blue-600 mt-1">Best time to visit: {weather.bestTimeToVisit}</p>
+            <p className="text-xs text-blue-600 mt-1">
+              Packing suggestions: {(weather.packingSuggestions || []).join(", ")}
+            </p>
+          </div>
+        )}
+
+        {attractions.length > 0 && (
+          <div>
+            <p className="text-xs font-medium text-gray-700 mb-2">Top attractions</p>
+            <div className="grid gap-2">
+              {attractions.slice(0, 6).map((place) => (
+                <div key={place.name} className="text-xs border border-gray-200 rounded-md px-3 py-2">
+                  <p className="font-medium text-gray-800">
+                    {place.name}
+                    {typeof place.rating === "number" ? ` • ${place.rating.toFixed(1)}★` : ""}
+                  </p>
+                  {place.address && <p className="text-gray-500">{place.address}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Manual Add Day Form */}
       <form onSubmit={handleAddDay} className="bg-white border border-gray-200 rounded-xl p-5 flex gap-3 flex-wrap">
         <input
@@ -150,6 +241,16 @@ const Itinerary = () => {
                   <span className="font-medium text-gray-800">{act.title}</span>
                   {act.location && <span className="text-gray-400 ml-2">📍 {act.location}</span>}
                   {act.notes && <p className="text-gray-400 text-xs mt-1">{act.notes}</p>}
+                  {(act.location || act.title) && (
+                    <a
+                      href={buildDirectionsUrl(activeTrip?.destination || "", act.location || act.title)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-indigo-600 hover:text-indigo-700 mt-1 inline-block"
+                    >
+                      Open route in Maps
+                    </a>
+                  )}
                 </div>
                 <button onClick={() => handleRemoveActivity(day.id, day.activities, idx)} className="text-red-400 hover:text-red-600 ml-4 text-xs">
                   ✕

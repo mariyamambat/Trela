@@ -5,20 +5,46 @@ import * as svc from "../services/tripsService";
 export const useTrips = () => {
   const { user } = useAuth();
   const [trips, setTrips] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadedUserId, setLoadedUserId] = useState(null);
+  const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
+  const loading = user === undefined || (Boolean(user) && loadedUserId !== user.uid);
 
   useEffect(() => {
+    if (user === undefined) return;
     if (!user) return;
-    svc.getTrips(user.uid).then((data) => {
-      setTrips(data);
-      setLoading(false);
-    });
-  }, [user]);
+    if (loadedUserId === user.uid) return;
+
+    svc
+      .getTrips(user.uid)
+      .then((data) => {
+        setTrips(data);
+      })
+      .catch((err) => {
+        console.error("Failed to load trips:", err);
+        setError(err?.message || "Could not load trips.");
+        setTrips([]);
+      })
+      .finally(() => {
+        setLoadedUserId(user.uid);
+      });
+  }, [user, loadedUserId]);
 
   const createTrip = useCallback(
     async (data) => {
-      const ref = await svc.addTrip(user.uid, data);
-      setTrips((prev) => [{ id: ref.id, ...data }, ...prev]);
+      if (!user?.uid) throw new Error("You are not signed in.");
+      setCreating(true);
+      setError("");
+      try {
+        const ref = await svc.addTrip(user.uid, data);
+        setTrips((prev) => [{ id: ref.id, ...data }, ...prev]);
+      } catch (err) {
+        const message = err?.message || "Failed to create trip.";
+        setError(message);
+        throw err;
+      } finally {
+        setCreating(false);
+      }
     },
     [user],
   );
@@ -36,5 +62,5 @@ export const useTrips = () => {
     [trips],
   );
 
-  return { trips: sortedTrips, loading, createTrip, removeTrip };
+  return { trips: sortedTrips, loading, error, creating, createTrip, removeTrip };
 };

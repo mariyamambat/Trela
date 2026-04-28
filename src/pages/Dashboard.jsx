@@ -4,10 +4,11 @@ import { useTrips } from "../hooks/useTrips";
 import { useTrip } from "../context/TripContext";
 
 const Dashboard = () => {
-  const { trips, loading, createTrip, removeTrip } = useTrips();
+  const { trips, loading, error, creating, createTrip, removeTrip } = useTrips();
   const { setActiveTrip } = useTrip();
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
+  const [createError, setCreateError] = useState("");
   const [form, setForm] = useState({
     title: "",
     destination: "",
@@ -19,16 +20,22 @@ const Dashboard = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    await createTrip(form);
-    setShowForm(false);
-    setForm({
-      title: "",
-      destination: "",
-      startDate: "",
-      endDate: "",
-      totalBudget: "",
-      currency: "INR",
-    });
+    setCreateError("");
+    try {
+      await createTrip(form);
+      setShowForm(false);
+      setForm({
+        title: "",
+        destination: "",
+        startDate: "",
+        endDate: "",
+        totalBudget: "",
+        currency: "INR",
+      });
+    } catch (err) {
+      const message = err?.message || "Could not create trip. Please try again.";
+      setCreateError(message);
+    }
   };
 
   const openTrip = (trip) => {
@@ -101,19 +108,23 @@ const Dashboard = () => {
           </select>
           <button
             type="submit"
-            className="col-span-2 bg-indigo-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-indigo-700"
+            disabled={creating}
+            className="col-span-2 bg-indigo-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Create Trip
+            {creating ? "Creating..." : "Create Trip"}
           </button>
+          {createError && <p className="col-span-2 text-sm text-red-500">{createError}</p>}
         </form>
       )}
+
+      {error && !showForm && <p className="text-sm text-red-500 mb-4">{error}</p>}
 
       {loading ? (
         <p className="text-gray-400 text-sm">Loading trips...</p>
       ) : trips.length === 0 ? (
         <div className="text-center py-20 text-gray-400">
           <p className="text-4xl mb-3">🗺</p>
-          <p className="text-sm">No trips yet. Create your first one!</p>
+          <p className="text-sm">No trips planned yet !</p>
         </div>
       ) : (
         <div className="grid gap-4">

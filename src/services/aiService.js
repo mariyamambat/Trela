@@ -1,7 +1,10 @@
 const GEMINI_MODEL = "gemini-2.0-flash";
 
-const buildPrompt = (destination, days, currency) => `Generate a ${days}-day travel itinerary for ${destination}.
+const buildPrompt = (destination, days, currency, context = {}) => `Generate a ${days}-day travel itinerary for ${destination}.
 Trip currency for any cost hints: ${currency}.
+Attractions to prioritize: ${(context.attractions || []).map((p) => p.name).join(", ") || "Use popular local attractions"}.
+Weather context: ${context.weatherSummary || "No weather data available"}.
+Packing context: ${context.packingSummary || "General packing advice"}.
 Return ONLY a JSON array, no explanation, no markdown, no code fences, just raw JSON like this:
 [
   {
@@ -12,9 +15,9 @@ Return ONLY a JSON array, no explanation, no markdown, no code fences, just raw 
     ]
   }
 ]
-Generate exactly ${days} day objects.`;
+Generate exactly ${days} day objects. Keep activities geographically sensible when possible.`;
 
-export const generateItinerary = async (destination, days, currency) => {
+export const generateItinerary = async (destination, days, currency, context = {}) => {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY?.trim();
   if (!apiKey) {
     throw new Error("Missing VITE_GEMINI_API_KEY.");
@@ -26,7 +29,7 @@ export const generateItinerary = async (destination, days, currency) => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: buildPrompt(destination, days, currency) }] }],
+      contents: [{ parts: [{ text: buildPrompt(destination, days, currency, context) }] }],
       generationConfig: {
         maxOutputTokens: 2048,
         responseMimeType: "application/json",
